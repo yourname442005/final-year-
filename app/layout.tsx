@@ -1,5 +1,6 @@
 import type {Metadata} from 'next';
 import './globals.css';
+import { ClientShell } from '@/components/ClientShell';
 
 export const metadata: Metadata = {
   title: 'AI-Native Research Intelligence Platform',
@@ -10,7 +11,9 @@ export default function RootLayout({children}: {children: React.ReactNode}) {
   return (
     <html lang="en">
       <body suppressHydrationWarning className="bg-[#f0eee6] text-[#141413] min-h-screen font-serif">
-        {children}
+        <ClientShell>
+          {children}
+        </ClientShell>
       </body>
     </html>
   );

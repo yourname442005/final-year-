@@ -1,15 +1,17 @@
 'use client';
 
 import React from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Sparkles, Bell, ShieldCheck, Zap, User as UserIcon } from 'lucide-react';
 import { usePlatformStore } from '@/lib/platform-store';
 
 interface NavbarProps {
-  activeTab: string;
-  onNavigate: (tab: string) => void;
+  activeTab?: string;
+  onNavigate?: (tab: string) => void;
   onOpenVerification: () => void;
   isHttpAccelerated: boolean;
-  setIsHttpAccelerated: (val: boolean) => void;
+  setIsHttpAccelerated: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -19,15 +21,23 @@ export const Navbar: React.FC<NavbarProps> = ({
   isHttpAccelerated,
   setIsHttpAccelerated
 }) => {
+  const router = useRouter();
   const { user, notifications } = usePlatformStore();
   const unreadCount = notifications.filter((n) => !n.read).length;
+
+  const handleNav = (path: string, tabId: string) => {
+    if (onNavigate) {
+      onNavigate(tabId);
+    }
+    router.push(path);
+  };
 
   return (
     <header className="sticky top-0 z-40 bg-[#f0eee6] border-b border-[#cccbc8] px-4 md:px-8 py-3.5 flex items-center justify-between gap-4">
       {/* Brand & Platform Identity */}
       <div className="flex items-center gap-3">
         <div
-          onClick={() => onNavigate('feed')}
+          onClick={() => handleNav('/', 'feed')}
           className="flex items-center gap-2 cursor-pointer group"
         >
           <div className="w-8 h-8 rounded-lg bg-[#141413] text-[#faf9f5] flex items-center justify-center group-hover:bg-[#d97757] transition-colors">
@@ -79,7 +89,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
         {/* Notifications Icon with Badge */}
         <button
-          onClick={() => onNavigate('notifications')}
+          onClick={() => handleNav('/notifications', 'notifications')}
           className="relative p-2 rounded-xl border border-[#cccbc8] bg-[#faf9f5] hover:bg-[#e3dacc] text-[#141413] transition-colors cursor-pointer"
           title="Notifications"
         >
@@ -93,7 +103,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
         {/* User Profile Quick Access */}
         <button
-          onClick={() => onNavigate('settings')}
+          onClick={() => handleNav('/settings', 'settings')}
           className="flex items-center gap-2 p-1.5 pr-3 rounded-xl border border-[#cccbc8] bg-[#faf9f5] hover:bg-[#e3dacc] transition-colors cursor-pointer"
         >
           <img
@@ -109,3 +119,4 @@ export const Navbar: React.FC<NavbarProps> = ({
     </header>
   );
 };
+

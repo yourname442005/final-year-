@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { usePathname, useRouter } from 'next/navigation';
 import {
   Rss,
   Search,
@@ -18,33 +19,58 @@ import {
 import { usePlatformStore } from '@/lib/platform-store';
 
 interface SidebarProps {
-  activeTab: string;
-  onNavigate: (tab: string) => void;
+  activeTab?: string;
+  onNavigate?: (tab: string) => void;
   onOpenNewPost: () => void;
   onOpenNewProject: () => void;
   onOpenNewManuscript: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
-  activeTab,
+  activeTab: activeTabProp,
   onNavigate,
   onOpenNewPost,
   onOpenNewProject,
   onOpenNewManuscript
 }) => {
+  const pathname = usePathname();
+  const router = useRouter();
   const { user } = usePlatformStore();
 
+  const pathToTabMap: Record<string, string> = {
+    '/': 'feed',
+    '/search': 'search',
+    '/discover': 'discover',
+    '/workspace': 'workspace',
+    '/collections': 'collections',
+    '/saved': 'saved',
+    '/network': 'network',
+    '/trending': 'trending',
+    '/publish': 'publish',
+    '/settings': 'settings',
+    '/notifications': 'notifications'
+  };
+
+  const activeTab = activeTabProp || pathToTabMap[pathname] || 'feed';
+
+  const handleNav = (href: string, tabId: string) => {
+    if (onNavigate) {
+      onNavigate(tabId);
+    }
+    router.push(href);
+  };
+
   const navItems = [
-    { id: 'feed', label: 'Research Feed', icon: Rss, badge: null },
-    { id: 'search', label: 'AI Semantic Search', icon: Search, badge: null },
-    { id: 'discover', label: 'Paper Discovery', icon: Compass, badge: null },
-    { id: 'workspace', label: 'Research Workspace', icon: FolderKanban, badge: null },
-    { id: 'collections', label: 'Collections', icon: Bookmark, badge: null },
-    { id: 'saved', label: 'Saved Papers', icon: Library, badge: null },
-    { id: 'network', label: 'Researcher Network', icon: Users, badge: null },
-    { id: 'trending', label: 'Trending Research', icon: TrendingUp, badge: null },
-    { id: 'publish', label: 'Paper Publishing', icon: Upload, badge: user.verified ? 'Verified' : null },
-    { id: 'settings', label: 'Settings & Profile', icon: Settings, badge: null }
+    { id: 'feed', label: 'Research Feed', icon: Rss, badge: null, href: '/' },
+    { id: 'search', label: 'AI Semantic Search', icon: Search, badge: null, href: '/search' },
+    { id: 'discover', label: 'Paper Discovery', icon: Compass, badge: null, href: '/discover' },
+    { id: 'workspace', label: 'Research Workspace', icon: FolderKanban, badge: null, href: '/workspace' },
+    { id: 'collections', label: 'Collections', icon: Bookmark, badge: null, href: '/collections' },
+    { id: 'saved', label: 'Saved Papers', icon: Library, badge: null, href: '/saved' },
+    { id: 'network', label: 'Researcher Network', icon: Users, badge: null, href: '/network' },
+    { id: 'trending', label: 'Trending Research', icon: TrendingUp, badge: null, href: '/trending' },
+    { id: 'publish', label: 'Paper Publishing', icon: Upload, badge: user.verified ? 'Verified' : null, href: '/publish' },
+    { id: 'settings', label: 'Settings & Profile', icon: Settings, badge: null, href: '/settings' }
   ];
 
   return (
@@ -58,7 +84,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             
             {/* Top Branding Mark */}
             <div
-              onClick={() => onNavigate('feed')}
+              onClick={() => handleNav('/', 'feed')}
               className="flex items-center gap-3 cursor-pointer group/logo py-1 px-1 border-b border-[#cccbc8]/60 pb-3"
               title="suiiiiiiii"
             >
@@ -120,7 +146,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 return (
                   <button
                     key={item.id}
-                    onClick={() => onNavigate(item.id)}
+                    onClick={() => handleNav(item.href, item.id)}
                     title={item.label}
                     className={`w-full flex items-center justify-between px-2.5 py-2.5 rounded-xl font-sans text-xs font-medium transition-all cursor-pointer group/item ${
                       isActive
@@ -173,18 +199,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
       {/* Mobile Bottom Navigation Bar */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#f0eee6] border-t border-[#cccbc8] px-2 py-2 flex items-center justify-around">
         {[
-          { id: 'feed', label: 'Feed', icon: Rss },
-          { id: 'search', label: 'Search', icon: Search },
-          { id: 'discover', label: 'Papers', icon: Compass },
-          { id: 'workspace', label: 'Workspace', icon: FolderKanban },
-          { id: 'publish', label: 'Publish', icon: Upload }
+          { id: 'feed', label: 'Feed', icon: Rss, href: '/' },
+          { id: 'search', label: 'Search', icon: Search, href: '/search' },
+          { id: 'discover', label: 'Papers', icon: Compass, href: '/discover' },
+          { id: 'workspace', label: 'Workspace', icon: FolderKanban, href: '/workspace' },
+          { id: 'publish', label: 'Publish', icon: Upload, href: '/publish' }
         ].map((item) => {
           const Icon = item.icon;
           const isActive = activeTab === item.id;
           return (
             <button
               key={item.id}
-              onClick={() => onNavigate(item.id)}
+              onClick={() => handleNav(item.href, item.id)}
               className={`flex flex-col items-center justify-center p-1.5 rounded-lg text-[10px] font-sans font-medium transition-colors ${
                 isActive ? 'text-[#d97757] font-bold' : 'text-[#87867f]'
               }`}
@@ -198,3 +224,4 @@ export const Sidebar: React.FC<SidebarProps> = ({
     </>
   );
 };
+
