@@ -1,6 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState } from 'react';
+import { usePathname } from 'next/navigation';
 import { Navbar } from '@/components/Navbar';
 import { Sidebar } from '@/components/Sidebar';
 import { Paper } from '@/lib/mock-data';
@@ -44,6 +45,7 @@ export function useModals() {
 }
 
 export function ClientShell({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
   const [detailPaper, setDetailPaper] = useState<Paper | null>(null);
   const [citePaper, setCitePaper] = useState<Paper | null>(null);
   const [addToColPaper, setAddToColPaper] = useState<Paper | null>(null);
@@ -53,6 +55,35 @@ export function ClientShell({ children }: { children: React.ReactNode }) {
   const [isNewManuscriptOpen, setIsNewManuscriptOpen] = useState<boolean>(false);
   const [isVerificationOpen, setIsVerificationOpen] = useState<boolean>(false);
   const [isHttpAccelerated, setIsHttpAccelerated] = useState<boolean>(true);
+
+  const isPublicLanding = pathname === '/';
+
+  if (isPublicLanding) {
+    return (
+      <ModalContext.Provider
+        value={{
+          detailPaper,
+          setDetailPaper,
+          citePaper,
+          setCitePaper,
+          addToColPaper,
+          setAddToColPaper,
+          isNewPostOpen,
+          setIsNewPostOpen,
+          isNewProjectOpen,
+          setIsNewProjectOpen,
+          isNewManuscriptOpen,
+          setIsNewManuscriptOpen,
+          isVerificationOpen,
+          setIsVerificationOpen,
+          isHttpAccelerated,
+          setIsHttpAccelerated
+        }}
+      >
+        {children}
+      </ModalContext.Provider>
+    );
+  }
 
   return (
     <ModalContext.Provider
@@ -142,3 +173,4 @@ export function ClientShell({ children }: { children: React.ReactNode }) {
     </ModalContext.Provider>
   );
 }
+
