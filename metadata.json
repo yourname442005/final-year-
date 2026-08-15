@@ -1,0 +1,6 @@
+{
+  "name": "AI-Native Research Intelligence Platform",
+  "description": "Unified environment for discovering, understanding, organizing, collaborating around, and publishing research with AI intelligence.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
