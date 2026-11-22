@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
-import { X, Check, Copy, BookOpen } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, Check, Copy, BookOpen, Loader2 } from 'lucide-react';
 import { Paper } from '@/lib/mock-data';
+import { papersApi } from '@/lib/api/papers';
 
 interface CiteModalProps {
   paper: Paper | null;
@@ -12,16 +13,43 @@ interface CiteModalProps {
 export const CiteModal: React.FC<CiteModalProps> = ({ paper, onClose }) => {
   const [activeFormat, setActiveFormat] = useState<'APA' | 'MLA' | 'BibTeX' | 'RIS'>('APA');
   const [copied, setCopied] = useState(false);
+  const [serverCitation, setServerCitation] = useState<string | null>(null);
+  const [isLoadingCitation, setIsLoadingCitation] = useState(false);
+
+  useEffect(() => {
+    if (!paper?.id) {
+      setServerCitation(null);
+      return;
+    }
+    let isCurrent = true;
+    setIsLoadingCitation(true);
+    papersApi.getCitation(paper.id, activeFormat)
+      .then((res) => {
+        if (isCurrent && res?.citation) {
+          setServerCitation(res.citation);
+        }
+      })
+      .catch(() => {
+        // Local template handles fallback
+      })
+      .finally(() => {
+        if (isCurrent) setIsLoadingCitation(false);
+      });
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [paper?.id, activeFormat]);
 
   if (!paper) return null;
 
   const authorsStr = paper.authors.join(', ');
   const firstAuthorLast = paper.authors[0] ? paper.authors[0].split(' ').pop() : 'Author';
 
-  const citations = {
+  const localCitations = {
     APA: `${authorsStr} (${paper.year}). ${paper.title}. ${paper.venue}. https://doi.org/${paper.doi}`,
     MLA: `${authorsStr}. "${paper.title}." ${paper.venue}, ${paper.year}. DOI: ${paper.doi}.`,
-    BibTeX: `@article{${firstAuthorLast?.toLowerCase()}${paper.year}${paper.id.replace('-', '')},
+    BibTeX: `@article{${firstAuthorLast?.toLowerCase()}${paper.year}${paper.id.replace(/[^a-zA-Z0-9]/g, '')},
   title = {${paper.title}},
   author = {${paper.authors.join(' and ')}},
   journal = {${paper.venue}},
@@ -37,8 +65,10 @@ DO  - ${paper.doi}
 ER  -`
   };
 
+  const currentCitation = serverCitation || localCitations[activeFormat];
+
   const handleCopy = () => {
-    navigator.clipboard.writeText(citations[activeFormat]);
+    navigator.clipboard.writeText(currentCitation);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -83,8 +113,15 @@ ER  -`
         </div>
 
         {/* Citation Box */}
-        <div className="bg-[#f0eee6] border border-[#cccbc8] rounded-xl p-4 font-mono text-xs text-[#141413] leading-relaxed overflow-x-auto whitespace-pre-wrap max-h-48">
-          {citations[activeFormat]}
+        <div className="bg-[#f0eee6] border border-[#cccbc8] rounded-xl p-4 font-mono text-xs text-[#141413] leading-relaxed overflow-x-auto whitespace-pre-wrap max-h-48 relative">
+          {isLoadingCitation ? (
+            <div className="flex items-center gap-2 text-[#87867f] py-4">
+              <Loader2 className="w-4 h-4 animate-spin text-[#d97757]" />
+              <span>Formatting {activeFormat} citation from server...</span>
+            </div>
+          ) : (
+            currentCitation
+          )}
         </div>
 
         {/* Actions */}

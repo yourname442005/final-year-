@@ -743,7 +743,7 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
             {chatMessages.map((m, idx) => (
               <div
                 key={idx}
-                className={`p-3 rounded-xl max-w-2xl text-xs font-serif leading-relaxed ${
+                className={`p-3 rounded-xl max-w-2xl text-xs font-serif leading-relaxed whitespace-pre-wrap ${
                   m.sender === 'user'
                     ? 'bg-[#141413] text-[#faf9f5] ml-auto'
                     : 'bg-[#faf9f5] text-[#141413] border border-[#cccbc8]'

@@ -61,5 +61,5 @@ export const papersApi = {
 
   getTags: () => api.get<string[]>('/api/v1/papers/tags'),
 
-  aiAnalysis: (id: string) => api.post<{ summary: string }>(`/api/v1/papers/${id}/ai-analysis`),
+  aiAnalysis: (id: string) => api.post<Paper>(`/api/v1/papers/${id}/ai-analysis`),
 };

@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState } from 'react';
-import { X, Sparkles, Bookmark, BookmarkCheck, Quote, FolderPlus, ExternalLink, RefreshCw, Layers, Check, AlertCircle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, Sparkles, Bookmark, BookmarkCheck, Quote, FolderPlus, ExternalLink, RefreshCw, Layers, Check, AlertCircle, Loader2 } from 'lucide-react';
 import { Paper } from '@/lib/mock-data';
 import { usePlatformStore } from '@/lib/platform-store';
+import { papersApi } from '@/lib/api/papers';
 
 interface PaperDetailModalProps {
   paper: Paper | null;
@@ -30,6 +31,45 @@ export const PaperDetailModal: React.FC<PaperDetailModalProps> = ({
     researchGaps?: string[];
     citationContext?: string;
   } | null>(null);
+  const [relatedPapers, setRelatedPapers] = useState<Paper[]>([]);
+  const [loadingRelated, setLoadingRelated] = useState(false);
+
+  useEffect(() => {
+    if (!paper?.id) {
+      setRelatedPapers([]);
+      setCurrentSummary(null);
+      setCurrentInsights(null);
+      return;
+    }
+
+    setCurrentSummary(null);
+    setCurrentInsights(null);
+    let isCurrent = true;
+    setLoadingRelated(true);
+
+    papersApi.getRelated(paper.id)
+      .then((data) => {
+        if (!isCurrent) return;
+        if (Array.isArray(data) && data.length > 0) {
+          setRelatedPapers(data);
+        } else {
+          setRelatedPapers(papers.filter((p) => p.id !== paper.id).slice(0, 3));
+        }
+      })
+      .catch((err) => {
+        console.error('Failed to fetch related papers:', err);
+        if (isCurrent) {
+          setRelatedPapers(papers.filter((p) => p.id !== paper.id).slice(0, 3));
+        }
+      })
+      .finally(() => {
+        if (isCurrent) setLoadingRelated(false);
+      });
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [paper?.id, papers]);
 
   if (!paper) return null;
 
@@ -53,6 +93,21 @@ export const PaperDetailModal: React.FC<PaperDetailModalProps> = ({
   const handleRefreshAISummary = async () => {
     setIsGeneratingSummary(true);
     try {
+      const backendRes = await papersApi.aiAnalysis(paper.id).catch(() => null);
+      if (backendRes && backendRes.aiSummary) {
+        setCurrentSummary(backendRes.aiSummary);
+        if (backendRes.keyContributions) {
+          setCurrentInsights({
+            keyContributions: backendRes.keyContributions,
+            methodology: backendRes.methodology,
+            limitations: backendRes.limitations,
+            researchGaps: backendRes.researchGaps,
+            citationContext: backendRes.citationContext,
+          });
+        }
+        return;
+      }
+
       const resSum = await fetch('/api/summarize', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -88,8 +143,6 @@ export const PaperDetailModal: React.FC<PaperDetailModalProps> = ({
       setIsGeneratingSummary(false);
     }
   };
-
-  const relatedPapers = papers.filter((p) => p.id !== paper.id).slice(0, 3);
 
   return (
     <div className="fixed inset-0 z-50 bg-[#141413]/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
@@ -278,22 +331,39 @@ export const PaperDetailModal: React.FC<PaperDetailModalProps> = ({
         </div>
 
         {/* Related Papers */}
-        {relatedPapers.length > 0 && (
-          <div className="space-y-3 pt-4 border-t border-[#cccbc8]">
-            <h3 className="font-sans text-sm font-semibold tracking-wider text-[#141413] uppercase">
-              Related Research Papers
+        <div className="space-y-3 pt-4 border-t border-[#cccbc8]">
+          <div className="flex items-center justify-between">
+            <h3 className="font-sans text-sm font-semibold tracking-wider text-[#141413] uppercase flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-[#d97757]" />
+              Semantically Related Research Papers
             </h3>
+            {loadingRelated && (
+              <span className="font-sans text-xs text-[#87867f] flex items-center gap-1.5">
+                <Loader2 className="w-3.5 h-3.5 animate-spin text-[#d97757]" />
+                Searching vector index...
+              </span>
+            )}
+          </div>
+
+          {relatedPapers.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               {relatedPapers.map((rel) => (
                 <div
                   key={rel.id}
                   onClick={() => onSelectRelatedPaper?.(rel)}
-                  className="bg-[#f0eee6] border border-[#cccbc8] rounded-xl p-3 hover:border-[#d97757] cursor-pointer transition-colors space-y-1"
+                  className="bg-[#f0eee6] border border-[#cccbc8] rounded-xl p-3 hover:border-[#d97757] hover:shadow-xs cursor-pointer transition-all space-y-1.5 group"
                 >
-                  <span className="font-sans text-[11px] text-[#87867f] block">
-                    {rel.venue} ({rel.year})
-                  </span>
-                  <h5 className="font-serif text-sm text-[#141413] font-medium line-clamp-2">
+                  <div className="flex items-center justify-between">
+                    <span className="font-sans text-[11px] text-[#87867f] block truncate">
+                      {rel.venue || 'arXiv'} ({rel.year})
+                    </span>
+                    {rel.relevanceSignal && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded font-medium bg-[#e3dacc] text-[#141413]">
+                        {rel.relevanceSignal}
+                      </span>
+                    )}
+                  </div>
+                  <h5 className="font-serif text-sm text-[#141413] font-medium line-clamp-2 group-hover:text-[#d97757] transition-colors">
                     {rel.title}
                   </h5>
                   <span className="font-sans text-xs text-[#d97757] font-semibold block pt-1">
@@ -302,8 +372,12 @@ export const PaperDetailModal: React.FC<PaperDetailModalProps> = ({
                 </div>
               ))}
             </div>
-          </div>
-        )}
+          ) : !loadingRelated ? (
+            <p className="font-serif text-xs text-[#87867f] italic">
+              No direct semantic neighbors found for this manuscript.
+            </p>
+          ) : null}
+        </div>
 
       </div>
     </div>
