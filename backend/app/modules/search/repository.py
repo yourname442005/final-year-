@@ -51,14 +51,14 @@ class SearchRepository:
         candidates: dict[str, RankedPaper] = {}
         arms_used: list[str] = []
 
-        want_vector = mode in ("semantic", "hybrid") and query_vector is not None
+        want_vector = mode in ("semantic", "hybrid")
         want_text = mode in ("keyword", "hybrid")
 
         vector_rank: dict[str, int] = {}
         text_rank: dict[str, int] = {}
 
         if want_vector:
-            rows = self._vector_rank(query_vector or [], filters, limit)
+            rows = self._vector_rank(query, query_vector, filters, limit)
             vector_rank = {pid: i for i, (pid, _) in enumerate(rows)}
             arms_used.append("vector")
             for pid, cosine in rows:
@@ -129,8 +129,29 @@ class SearchRepository:
     # ── arms ────────────────────────────────────────────────────────────
 
     def _vector_rank(
-        self, vector: list[float], filters: PaperFilters | None, limit: int
+        self, query: str, vector: list[float] | None, filters: PaperFilters | None, limit: int
     ) -> list[tuple[str, float]]:
+        # 1. Try ChromaDB persistent vector search + hybrid reranker
+        try:
+            from app.core.chroma_service import search_chroma
+            chroma_matches = search_chroma(query, top_k=limit)
+            if chroma_matches:
+                ext_ids = [c["id"] for c in chroma_matches]
+                papers = list(self.db.scalars(select(Paper).where(Paper.external_id.in_(ext_ids))).all())
+                by_ext = {p.external_id: p.id for p in papers}
+                ranked = []
+                for c in chroma_matches:
+                    pid = by_ext.get(c["id"])
+                    if pid:
+                        ranked.append((pid, float(c.get("score", 0.5))))
+                if ranked:
+                    return ranked
+        except Exception:
+            pass
+
+        if not vector:
+            return []
+
         stmt = select(Paper.id, Paper.embedding).where(Paper.embedding.is_not(None))
         stmt = _apply_filters(stmt, filters)
 
@@ -164,6 +185,14 @@ class SearchRepository:
         stmt = select(Paper.id)
         stmt = _apply_filters(stmt, filters)
         terms = _terms(query)
+        try:
+            from app.core.chroma_service import get_abbreviation_expansions
+            for exp in get_abbreviation_expansions(query):
+                for t in _terms(exp):
+                    if t and t not in terms:
+                        terms.append(t)
+        except Exception:
+            pass
 
         if self.dialect == "postgresql" and terms:
             tsquery = func.plainto_tsquery("english", query)

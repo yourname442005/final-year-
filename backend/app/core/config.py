@@ -6,6 +6,7 @@ Values come from environment / `.env` with the defaults documented in `.env.exam
 
 from __future__ import annotations
 
+import os
 from functools import lru_cache
 from typing import Literal
 
@@ -76,10 +77,10 @@ class Settings(BaseSettings):
 
     # ── llm ─────────────────────────────────────────────────────────────
     llm_provider: LLMProviderName = "gemini"
-    gemini_api_key: str = ""
-    gemini_model: str = "gemini-3.6-flash"
-    openai_api_key: str = ""
-    openai_model: str = "gpt-4o-mini"
+    gemini_api_key: str = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY") or ""
+    gemini_model: str = os.environ.get("GEMINI_MODEL") or "gemini-2.5-flash"
+    openai_api_key: str = os.environ.get("OPENAI_API_KEY") or ""
+    openai_model: str = os.environ.get("OPENAI_MODEL") or "gpt-4o-mini"
     llm_timeout_seconds: int = 30
     llm_max_output_tokens: int = 2048
 

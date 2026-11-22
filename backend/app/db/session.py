@@ -25,6 +25,12 @@ _ReadSessionFactory: sessionmaker[Session] | None = None
 
 
 def _build_engine(url: str, *, is_readonly: bool = False) -> Engine:
+    if url.startswith("sqlite"):
+        from pathlib import Path
+        backend_db = Path(__file__).resolve().parent.parent.parent / "ckgai_dev.db"
+        if "ckgai_dev.db" in url and backend_db.exists():
+            url = f"sqlite:///{backend_db.resolve().as_posix()}"
+
     kwargs: dict[str, object] = {
         "pool_pre_ping": True,
         "pool_recycle": 1800,

@@ -97,9 +97,16 @@ class FeedService:
             overlap = 0.0
             if interest_set:
                 tags = {str(t).lower() for t in (p.tags or [])}
-                hits = len(tags & interest_set)
+                if p.linked_paper:
+                    if p.linked_paper.domain:
+                        tags.add(p.linked_paper.domain.lower())
+                    if p.linked_paper.tags:
+                        tags.update(str(t).lower() for t in p.linked_paper.tags)
+                    if p.linked_paper.title:
+                        tags.update(p.linked_paper.title.lower().split())
+                hits = sum(1 for i in interest_set if any(i in t or t in i for t in tags))
                 overlap = min(1.0, hits / max(1, len(interest_set)))
-            return 0.5 * engagement + 0.3 * recency + 0.2 * overlap
+            return 0.45 * engagement + 0.25 * recency + 0.30 * overlap
 
         return sorted(posts, key=score, reverse=True)
 

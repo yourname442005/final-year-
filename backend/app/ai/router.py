@@ -169,13 +169,14 @@ def legacy_analyze_draft(body: DraftBody) -> dict[str, Any]:
 def legacy_chat(body: ChatBody) -> dict[str, Any]:
     if not body.message or not body.message.strip():
         return {"error": "Message text is required"}
-    reply = chat_assistant(
+    reply, sources = chat_assistant(
         message=body.message,
         project_context=body.projectContext,
         paper_context=body.paperContext,
         conversation_history=body.conversationHistory,
+        return_sources=True,
     )
-    return {"reply": reply}
+    return {"reply": reply, "sources": sources}
 
 
 __all__ = ["router", "settings"]
