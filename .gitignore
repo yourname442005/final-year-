@@ -5,3 +5,13 @@ coverage/
 *.log
 .env*
 !.env.example
+
+# Python virtual environment & cache
+.venv/
+__pycache__/
+*.pyc
+
+# ChromaDB vector store & indexes
+**/chroma_db/
+chroma_db/
+*.pickle
