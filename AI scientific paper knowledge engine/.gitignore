@@ -1,0 +1,13 @@
+__pycache__
+venv
+*.pyc
+.vscode
+# Ignore other scripts
+noun_chunks.py
+nountotoken.py
+text_cleaning_trial.py
+papercount.py
+
+# Ignore other data files
+cleaned_arxiv_data.json
+final_research_data.json
