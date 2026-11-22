@@ -100,7 +100,7 @@ class PaperRepository:
         return [by_id[pid] for pid in paper_ids if pid in by_id]
 
     def related(self, paper_id: str, limit: int = 3) -> list[Paper]:
-        """SPECTER2 neighbours precomputed into `related_papers`."""
+        """SPECTER2 / ChromaDB neighbours, with domain/category fallback."""
         stmt = (
             select(Paper)
             .join(RelatedPaper, RelatedPaper.related_to_id == Paper.id)
@@ -111,27 +111,46 @@ class PaperRepository:
         rows = list(self.db.scalars(stmt).all())
         if rows:
             return rows
-        # Cold start: fall back to shared-tag overlap so the modal never renders empty.
+
         seed = self.db.get(Paper, paper_id)
-        if seed is None or not seed.tags:
+        if seed is None:
             return []
-        fallback = (
-            select(Paper)
-            .where(Paper.id != paper_id, Paper.tags.overlap(seed.tags))  # type: ignore[attr-defined]
-            .order_by(Paper.citation_count.desc())
-            .limit(limit)
-        )
+
+        # 1. Try ChromaDB semantic similarity search
         try:
-            return list(self.db.scalars(fallback).all())
-        except Exception:  # noqa: BLE001 - JSONB overlap is postgres-only
-            return list(
-                self.db.scalars(
-                    select(Paper)
-                    .where(Paper.id != paper_id)
-                    .order_by(Paper.citation_count.desc())
-                    .limit(limit)
-                ).all()
-            )
+            from app.core.chroma_service import find_chroma_related
+            lookup_id = seed.external_id or seed.id
+            query_text = f"{seed.title}. {seed.abstract}" if seed.title else None
+            chroma_matches = find_chroma_related(lookup_id, query_text=query_text, top_k=limit)
+            if chroma_matches:
+                papers = list(self.db.scalars(
+                    select(Paper).where(Paper.external_id.in_(chroma_matches))
+                ).all())
+                if papers:
+                    return papers[:limit]
+        except Exception:
+            pass
+
+        # 2. SQLite / dialect-safe domain & category overlap fallback
+        if seed.domain:
+            domain_matches = list(self.db.scalars(
+                select(Paper)
+                .where(Paper.id != paper_id, Paper.domain == seed.domain)
+                .order_by(Paper.citation_count.desc())
+                .limit(limit)
+            ).all())
+            if domain_matches:
+                return domain_matches
+
+        # 3. Fallback to top cited papers
+        return list(
+            self.db.scalars(
+                select(Paper)
+                .where(Paper.id != paper_id)
+                .order_by(Paper.citation_count.desc())
+                .limit(limit)
+            ).all()
+        )
 
     def all_tags(self) -> list[str]:
         rows = self.db.scalars(select(PaperTag.tag).distinct()).all()

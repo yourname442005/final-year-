@@ -65,7 +65,10 @@ def format_citation(paper: Paper, fmt: str) -> str:
         return (head + tail).strip()
 
     if fmt == "BibTeX":
-        key = (last[0] if last else "anon") + str(year) + title.split()[0].lower()[:6]
+        last = _last_names(authors)
+        first_last = last[0].lower().replace(" ", "") if last else "anon"
+        first_title = title.split()[0].lower()[:6] if title.split() else "paper"
+        key = f"{first_last}{year}{first_title}"
         lines = [
             f"@article{{{key},",
             f"  title   = {{{title}}},",
